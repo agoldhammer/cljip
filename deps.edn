@@ -6,7 +6,7 @@
   :run-x {:ns-default agold.cljip
           :exec-fn greet
           :exec-args {:name "Clojure"}}
-  :build {:deps {io.github.seancorfield/build-clj
+  :build {:replace-deps {io.github.seancorfield/build-clj
                  {:git/tag "v0.6.3" :git/sha "9b8e09b"
                   ;; since we're building an app uberjar, we do not
                   ;; need deps-deploy for clojars.org deployment:
