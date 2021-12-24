@@ -1,0 +1,6 @@
+To run tests:
+clj -T:build test
+
+To run:
+clj -X:run-m agold.cljip/greet
+
