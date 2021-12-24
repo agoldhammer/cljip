@@ -18,6 +18,6 @@
 (comment
   (greet nil)
   (str/lower-case "FOO")
-  (config.core/load-env)
-  (e/load-env)
+  #_(config.core/load-env)
+  #_(e/load-env)
   )
