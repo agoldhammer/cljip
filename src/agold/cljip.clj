@@ -37,7 +37,9 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
     (println url)
     #_:clj-kondo/ignore
     (let [resp (http/get url)]
-      (ch/parse-string (:body @resp) true))
+      (doseq [item
+              (ch/parse-string (:body @resp) true)]
+        (println item)))
     )
   )
 
