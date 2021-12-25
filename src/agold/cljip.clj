@@ -1,6 +1,6 @@
 (ns agold.cljip
   (:require [config.core :as e]
-            [clojure.string :as str]
+            [clojure.string :as string]
             [clj-dns.core :as dns]
             ;; [clojure.data.json :as json]
             [cheshire.core :as ch]
@@ -48,7 +48,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   "Callable entry point to the application."
   [data]
   (println "conf key is: " (:API-KEY (get-config)))
-  (println "foo is" (str/lower-case "Foo"))
+  (println "foo is" (string/lower-case "Foo"))
   (println (str "Hello, " (or (:name data) "World") "!")))
 
 (defn -main
@@ -60,7 +60,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 (comment
   (dns/reverse-dns-lookup "13.35.77.94")
   (greet {:name "Art"})
-  (str/lower-case "FOO")
+  (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
   #_(config.core/load-env)
   #_(e/load-env)
