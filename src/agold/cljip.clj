@@ -1,7 +1,8 @@
 (ns agold.cljip
   (:require [config.core :as e]
             [clojure.string :as str]
-            [clojure.data.json :as json]
+            ;; [clojure.data.json :as json]
+            [cheshire.core :as ch]
             [org.httpkit.client :as http])
   (:gen-class))
 
@@ -36,7 +37,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
     (println url)
     #_:clj-kondo/ignore
     (let [resp (http/get url)]
-      (json/read-str (:body @resp) :key-fn keyword))
+      (ch/parse-string (:body @resp) true))
     )
   )
 
