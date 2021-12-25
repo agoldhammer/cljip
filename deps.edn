@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.10.3"}
         yogthos/config {:mvn/version "1.1.9"}
+        org.clojure/data.json {:mvn/version "2.4.0"}
         http-kit/http-kit {:mvn/version "2.5.3"}}
  :aliases
  {:run-m {:main-opts ["-m" "agold.cljip"]}

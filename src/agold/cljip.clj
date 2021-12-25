@@ -1,6 +1,7 @@
 (ns agold.cljip
   (:require [config.core :as e]
             [clojure.string :as str]
+            [clojure.data.json :as json]
             [org.httpkit.client :as http])
   (:gen-class))
 
@@ -34,7 +35,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (let [url (str ipgeo "?apiKey=" API-KEY "&ip=" ip "&fields=geo")]
     (println url)
     (let [resp (http/get url)]
-      (println (:body @resp)))
+      (json/read-str (:body @resp) :key-fn keyword))
     )
   )
 
@@ -53,7 +54,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 (comment
   (greet {:name "Art"})
   (str/lower-case "FOO")
-  (get-site-data "2601:184:4081:1c8c:117d:2f0a:ee6f:b860")
+  (get-site-data "8.8.8.8")
   #_(config.core/load-env)
   #_(e/load-env)
   )
