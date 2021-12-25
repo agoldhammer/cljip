@@ -16,7 +16,7 @@
   (greet {:name (first args)}))
 
 (comment
-  (greet nil)
+  (greet {:name "Art"})
   (str/lower-case "FOO")
   #_(config.core/load-env)
   #_(e/load-env)
