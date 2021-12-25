@@ -34,6 +34,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   [ip]
   (let [url (str ipgeo "?apiKey=" API-KEY "&ip=" ip "&fields=geo")]
     (println url)
+    #_:clj-kondo/ignore
     (let [resp (http/get url)]
       (json/read-str (:body @resp) :key-fn keyword))
     )
@@ -51,6 +52,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   [& args]
   (greet {:name (first args)}))
 
+{:skip-comments true}
 (comment
   (greet {:name "Art"})
   (str/lower-case "FOO")
