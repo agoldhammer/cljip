@@ -1,7 +1,8 @@
 (ns agold.cljip-test
   (:require [clojure.test :refer [deftest testing is]]
-            #_[agold.cljip :refer :all]))
+            [agold.cljip :as a]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+
+(deftest config-test
+  (testing "config loading"
+    (is (not (nil? (:API-KEY (a/get-config)))))))

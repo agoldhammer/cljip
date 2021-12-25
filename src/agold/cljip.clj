@@ -3,10 +3,15 @@
             [clojure.string :as str])
   (:gen-class))
 
+(defn get-config
+  "load config from config.edn in classpath"
+  []
+  (e/load-env))
+
 (defn greet
   "Callable entry point to the application."
   [data]
-  (println "conf key is: " (:API-KEY (e/load-env)))
+  (println "conf key is: " (:API-KEY (get-config)))
   (println "foo is" (str/lower-case "Foo"))
   (println (str "Hello, " (or (:name data) "World") "!")))
 
