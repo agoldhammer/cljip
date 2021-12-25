@@ -2,6 +2,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.10.3"}
         yogthos/config {:mvn/version "1.1.9"}
         ;; org.clojure/data.json {:mvn/version "2.4.0"}
+        net.apribase/clj-dns {:mvn/version "0.1.0"}
         cheshire/cheshire {:mvn/version "5.10.1"}
         http-kit/http-kit {:mvn/version "2.5.3"}}
  :aliases

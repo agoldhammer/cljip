@@ -1,6 +1,7 @@
 (ns agold.cljip
   (:require [config.core :as e]
             [clojure.string :as str]
+            [clj-dns.core :as dns]
             ;; [clojure.data.json :as json]
             [cheshire.core :as ch]
             [org.httpkit.client :as http])
@@ -57,6 +58,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 
 {:skip-comments true}
 (comment
+  (dns/reverse-dns-lookup "13.35.77.94")
   (greet {:name "Art"})
   (str/lower-case "FOO")
   (get-site-data "8.8.8.8")
