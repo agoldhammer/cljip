@@ -1,7 +1,6 @@
 (ns agold.cljip
   (:require [config.core :as e]
             [clojure.string :as string]
-            [clj-dns.core :as dns]
             [cheshire.core :as ch]
             [org.httpkit.client :as http])
   (:import [java.net InetAddress])
@@ -69,9 +68,8 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   [& args]
   (greet {:name (first args)}))
 
+#_:clj-kondo/ignore
 (comment
-  (dns/reverse-dns-lookup "100.35.79.95")
-
   (get-hostname "100.35.79.95")
   ;; pool-....
   (get-hostname "190.35.79.95")
