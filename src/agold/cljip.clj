@@ -29,7 +29,15 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
 (defonce API-KEY (:API-KEY (get-config)))
 
-
+(defn get-host
+  "get host from ip address, handle not found"
+  [ip]
+  (let [hostname (atom "nuts")]
+    (try
+      (reset! hostname (#(dns/reverse-dns-lookup ip)))
+      (catch Exception _ (#(reset! hostname (str "Host Not Found"))))
+      (finally (println "finally")))
+    {:hostname @hostname}))
 
 (defn get-site-data
   "fetch reverse dns and geodata for ip addr"
@@ -56,12 +64,19 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   [& args]
   (greet {:name (first args)}))
 
-{:skip-comments true}
+#_{:clj-kondo/ignore}
 (comment
-  (dns/reverse-dns-lookup "13.35.77.94")
+  (dns/reverse-dns-lookup "100.35.79.95")
+
+  (get-host "100.35.79.95")
+  ;; pool-....
+  (get-host "190.35.79.95")
+  ;; host not found
   (greet {:name "Art"})
   (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
+  #_{:clj-kondo/ignore [:unresolved-symbol]}
+  (xyz 1)
   #_(config.core/load-env)
   #_(e/load-env)
   )
