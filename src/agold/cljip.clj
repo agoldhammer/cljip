@@ -43,6 +43,8 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
       (catch Exception _ (#(reset! hostname "Host Not Found"))))
     {:hostname @hostname}))
 
+(def get-hostname-cached (memoize get-hostname))
+
 (defn get-site-data
   "fetch reverse dns and geodata for ip addr"
   [ip]
@@ -70,10 +72,11 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 
 #_:clj-kondo/ignore
 (comment
-  (get-hostname "100.35.79.95")
+(get-hostname-cached "100.35.79.95")
   ;; pool-....
-  (get-hostname "190.35.79.95")
+  (get-hostname-cached "190.35.79.95")
   ;; host not found, will return numerical ip addr as string
+  (get-hostname-cached "71.192.181.208")
   (greet {:name "Art"})
   (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
