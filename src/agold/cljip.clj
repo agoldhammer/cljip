@@ -2,10 +2,11 @@
   (:require [config.core :as e]
             [clojure.string :as string]
             [clj-dns.core :as dns]
-            ;; [clojure.data.json :as json]
             [cheshire.core :as ch]
             [org.httpkit.client :as http])
+  (:import [java.net InetAddress])
   (:gen-class))
+
 
 ;; using app.ipgeolocation.io for ip lookup
 "
@@ -29,14 +30,18 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
 (defonce API-KEY (:API-KEY (get-config)))
 
-(defn get-host
-  "get host from ip address, handle not found"
+(defn reverse-dns-lookup
+  "homespun version of reverse dns"
   [ip]
-  (let [hostname (atom "nuts")]
+  (.getCanonicalHostName (InetAddress/getByName ip)))
+
+(defn get-hostname
+  "get host from ip address, handle not found exception"
+  [ip]
+  (let [hostname (atom "none")]
     (try
-      (reset! hostname (#(dns/reverse-dns-lookup ip)))
-      (catch Exception _ (#(reset! hostname (str "Host Not Found"))))
-      (finally (println "finally")))
+      (reset! hostname (#(reverse-dns-lookup ip)))
+      (catch Exception _ (#(reset! hostname "Host Not Found"))))
     {:hostname @hostname}))
 
 (defn get-site-data
@@ -64,14 +69,13 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   [& args]
   (greet {:name (first args)}))
 
-#_{:clj-kondo/ignore}
 (comment
   (dns/reverse-dns-lookup "100.35.79.95")
 
-  (get-host "100.35.79.95")
+  (get-hostname "100.35.79.95")
   ;; pool-....
-  (get-host "190.35.79.95")
-  ;; host not found
+  (get-hostname "190.35.79.95")
+  ;; host not found, will return numerical ip addr as string
   (greet {:name "Art"})
   (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
@@ -79,4 +83,11 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (xyz 1)
   #_(config.core/load-env)
   #_(e/load-env)
+  ;; https://github.com/apribase/clj-dns/blob/master/src/clj_dns/core.clj
+  ;; https://gist.github.com/mwchambers/1316080
+  ;; clojure-interop/java.net
+  (.getCanonicalHostName (InetAddress/getByName "100.35.79.95"))
+  (.getCanonicalHostName (InetAddress/getByName "8.8.8.8"))
+  ;; (jn/InetAddress.get-host-address "8.8.8.8")
+  
   )
