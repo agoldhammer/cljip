@@ -4,3 +4,9 @@ clj -X:run-m agold.cljip/greet
 To run tests:
 clj -T:build test
 
+regex from go:
+`(\S+).+\[(.+)] "([^"]+)"`
+
+180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] "GET http://www.soso.com/ HTTP/1.1" 200 396 "-" "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36"
+
+

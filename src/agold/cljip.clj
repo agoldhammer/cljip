@@ -58,6 +58,23 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
     )
   )
 
+(defn log->vec-of-lines
+  "log file to vector of lines"
+  [fname]
+  (let [lines []]
+    (with-open [rdr (clojure.java.io/reader fname)]
+      (into lines (line-seq rdr)))))
+
+(defn parse-line
+  "parse line of log"
+  [line]
+  (let [parse-re #"(\S+).+[\[](\S+).+?\"(.+?)\""
+        parsed (re-find parse-re line)]
+    {:entry (parsed 0)
+     :ip (parsed 1)
+     :date (parsed 2)
+     :req (parsed 3)}))
+
 (defn greet
   "Callable entry point to the application."
   [data]
@@ -72,7 +89,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 
 #_:clj-kondo/ignore
 (comment
-(get-hostname-cached "100.35.79.95")
+  (get-hostname-cached "100.35.79.95")
   ;; pool-....
   (get-hostname-cached "190.35.79.95")
   ;; host not found, will return numerical ip addr as string
@@ -80,15 +97,18 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (greet {:name "Art"})
   (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
-  #_{:clj-kondo/ignore [:unresolved-symbol]}
-  (xyz 1)
-  #_(config.core/load-env)
-  #_(e/load-env)
+  (get-site-data "71.192.181.208")
   ;; https://github.com/apribase/clj-dns/blob/master/src/clj_dns/core.clj
   ;; https://gist.github.com/mwchambers/1316080
-  ;; clojure-interop/java.net
   (.getCanonicalHostName (InetAddress/getByName "100.35.79.95"))
   (.getCanonicalHostName (InetAddress/getByName "8.8.8.8"))
   ;; (jn/InetAddress.get-host-address "8.8.8.8")
-  
+  (re-find #"\".+" "Hello \"Dolly\"")
+  (def logstr "180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] \"GET http://www.soso.com/ HTTP/1.1\" 200 396 \"-\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36\"")
+  (re-find #"(\S+).+[\[](\S+).+?\"(.+?)\"" logstr)
+  (System/getProperty "user.home")
+  (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")
+  (println (parse-line logstr))
+  (time
+   (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
   )
