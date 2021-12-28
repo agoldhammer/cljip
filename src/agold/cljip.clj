@@ -128,7 +128,5 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (println (parse-line logstr))
   (time
    (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
-(map (comp dp/datestr->jtime #(get % :date))
-     (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
-  (parse-log "/home/agold/Prog/cljip/testdata/default.log")
+  (time (parse-log "/home/agold/Prog/cljip/testdata/default.log"))
   )
