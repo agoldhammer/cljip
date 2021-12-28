@@ -1,6 +1,8 @@
 (ns agold.dateparser
+  #_{:clj-kondo/ignore [:unused-import]}
   (:import (java.time ZonedDateTime format.DateTimeFormatter)))
 
+#_{:clj-kondo/ignore [:unresolved-namespace]}
 (def formatter (DateTimeFormatter/ofPattern "yyyyMMdd:HHmmss z"))
 
 (def month-map
@@ -14,8 +16,7 @@
   [datestr]
   (let [;;re #"(\S+)/(\S+)/(\S+?):"
         re #"(\S+)/(\S+)/(\S+?):(\S+):(\S+):(\S+)"
-        parsed (re-find re datestr)
-        month (parsed 2)]
+        parsed (re-find re datestr)]
     (str (parsed 3) (get month-map (parsed 2)) (parsed 1) ":" (parsed 4) (parsed 5)
          (parsed 6) " GMT+00:00")))
 

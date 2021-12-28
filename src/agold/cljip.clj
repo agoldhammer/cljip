@@ -1,8 +1,10 @@
 (ns agold.cljip
   (:require [config.core :as e]
+            [clojure.java.io :as io]
             [clojure.string :as string]
             [cheshire.core :as ch]
-            [org.httpkit.client :as http])
+            [org.httpkit.client :as http]
+            [agold.dateparser :as dp])
   (:import [java.net InetAddress])
   (:gen-class))
 
@@ -62,18 +64,33 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   "log file to vector of lines"
   [fname]
   (let [lines []]
-    (with-open [rdr (clojure.java.io/reader fname)]
+    (with-open [rdr (io/reader fname)]
       (into lines (line-seq rdr)))))
 
 (defn parse-line
   "parse line of log"
   [line]
-  (let [parse-re #"(\S+).+[\[](\S+).+?\"(.+?)\""
+  (let [parse-re #"(\S+).+?[\[](\S+).+?\"(.+?)\""
         parsed (re-find parse-re line)]
     {:entry (parsed 0)
      :ip (parsed 1)
      :date (parsed 2)
      :req (parsed 3)}))
+
+;; log-entry has shape {:entry x :ip y :date d :req r}
+
+(defn fix-date
+  "get date part of logentry"
+  [log-entry]
+  (let [date (:date log-entry)]
+    #_(println date)
+    (assoc log-entry :date (dp/datestr->jtime date))))
+
+(defn parse-log
+  "logfname to vec of logentries with jdatetimes"
+  [logfname]
+  (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
+     (mapv fix-date vec-logentries)))
 
 (defn greet
   "Callable entry point to the application."
@@ -111,4 +128,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (println (parse-line logstr))
   (time
    (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
+(map (comp dp/datestr->jtime #(get % :date))
+     (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
+  (parse-log "/home/agold/Prog/cljip/testdata/default.log")
   )
