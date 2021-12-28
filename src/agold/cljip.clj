@@ -15,14 +15,13 @@
   "fetch reverse dns and geodata for ip addr"
   [ip]
   (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
-    (println url)
     #_:clj-kondo/ignore
-    (let [resp (http/get url)]
-      (doseq [item
-              (ch/parse-string (:body @resp) true)]
-        (println item)))
-    )
-  )
+    (let [resp @(http/get url)]
+      (if (= (:status resp) 200)
+        {:site-data (ch/parse-string (:body resp) true)}
+        {:site-data "N/A"}))))
+
+(def get-site-data-cached (memoize get-site-data))
 
 (defn log->vec-of-lines
   "log file to vector of lines"
@@ -56,6 +55,16 @@
   (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
      (mapv fix-date vec-logentries)))
 
+(defn add-hostname
+  "adds hostname to log entry"
+  [le]
+  (merge le (ipg/get-hostname-cached (:ip le))))
+
+(defn add-site-data
+   "add site data to log entry"
+ [le]
+ (merge le (get-site-data-cached (:ip le))))
+
 #_(defn greet
   "Callable entry point to the application."
   [data]
@@ -88,4 +97,7 @@
   (time
    (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
   (time (parse-log "/home/agold/Prog/cljip/testdata/default.log"))
+  (def default-log "/home/agold/Prog/cljip/testdata/default.log")
+  (map add-hostname (parse-log default-log))
+(map add-site-data (parse-log default-log))
   )
