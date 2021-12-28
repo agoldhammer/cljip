@@ -1,56 +1,20 @@
 (ns agold.cljip
-  (:require [config.core :as e]
+  (:require #_[config.core :as e]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
-            [agold.dateparser :as dp])
-  (:import [java.net InetAddress])
+            [agold.dateparser :as dp]
+            [agold.ipgeo :as ipg])
   (:gen-class))
 
-
-;; using app.ipgeolocation.io for ip lookup
-"
- # Get geolocation for an IPv4 IP Address = 8.8.8.8
-$ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=8.8.8.8'
-
-# Get geolocation for an IPv6 IP Address = 2001:4860:4860::1
-$ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=2001:4860:4860::1'
-
-# Get geolocation for a domain name = google.com
-$ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
- 
- for fields selection:
- $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=1.1.1.1&fields=city'
-"
-(defn get-config
-  "load config from config.edn in classpath"
-  []
-  (e/load-env))
-
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
-(defonce API-KEY (:API-KEY (get-config)))
 
-(defn reverse-dns-lookup
-  "homespun version of reverse dns"
-  [ip]
-  (.getCanonicalHostName (InetAddress/getByName ip)))
-
-(defn get-hostname
-  "get host from ip address, handle not found exception"
-  [ip]
-  (let [hostname (atom "none")]
-    (try
-      (reset! hostname (#(reverse-dns-lookup ip)))
-      (catch Exception _ (#(reset! hostname "Host Not Found"))))
-    {:hostname @hostname}))
-
-(def get-hostname-cached (memoize get-hostname))
 
 (defn get-site-data
   "fetch reverse dns and geodata for ip addr"
   [ip]
-  (let [url (str ipgeo "?apiKey=" API-KEY "&ip=" ip "&fields=geo")]
+  (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
     (println url)
     #_:clj-kondo/ignore
     (let [resp (http/get url)]
@@ -92,25 +56,20 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
      (mapv fix-date vec-logentries)))
 
-(defn greet
+#_(defn greet
   "Callable entry point to the application."
   [data]
-  (println "conf key is: " (:API-KEY (get-config)))
+  (println "conf key is: " (:API-KEY (ipg/get-config)))
   (println "foo is" (string/lower-case "Foo"))
   (println (str "Hello, " (or (:name data) "World") "!")))
 
-(defn -main
+#_(defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (greet {:name (first args)}))
 
 #_:clj-kondo/ignore
 (comment
-  (get-hostname-cached "100.35.79.95")
-  ;; pool-....
-  (get-hostname-cached "190.35.79.95")
-  ;; host not found, will return numerical ip addr as string
-  (get-hostname-cached "71.192.181.208")
   (greet {:name "Art"})
   (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
