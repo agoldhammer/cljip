@@ -6,7 +6,8 @@
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
             [agold.dateparser :as dp]
-            [agold.ipgeo :as ipg])
+            [agold.ipgeo :as ipg]
+            [agold.ip-pp :as ipp])
   (:gen-class))
 
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
@@ -82,15 +83,15 @@
   "process log file"
   [logfname]
   (let [vec-of-les (parse-log logfname)
-        inch (a/chan)
-        outch (a/chan)]
+        outch (ipp/start-print-loop)
+        inch (a/chan)]
     (add-data-async inch outch)
-    (a/go-loop [item (a/<! outch)]
-      (when item
-        (println item)
-        (recur (a/<! outch))))
+    #_(a/go-loop [item (a/<! outch)]
+        (when item
+          (println item)
+          (recur (a/<! outch))))
     (a/go (doseq [le vec-of-les]
-            (println "adding ...")
+            #_(println "adding ...")
             (a/>! inch le)))
     #_(a/close! inch)))
 
@@ -140,23 +141,6 @@
     (when item
       (println item)
       (recur (a/<! p-ch))))
-  (a/>!! p-ch "Hello Dolly")
-
-  ;; pipeline-async example
-  (def ca> (a/chan 1))
-  (def cb> (a/chan 1))
-  (defn c-af [val result] ; notice the signature is different for `pipeline-async`, it includes a channel
-    (a/go (a/<! (a/timeout 1000))
-        (a/>! result (str val "!!!"))
-        (a/close! result)))
-  (a/pipeline-async
-   1
-   cb>
-   c-af
-   ca>)
-  (a/go (println (a/<! cb>)))
-(a/go (>! ca> "hello"))
-  (a/>!! ca> "hello")
-  )
+  (a/>!! p-ch "Hello Dolly"))
 
 
