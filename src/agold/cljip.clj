@@ -1,6 +1,7 @@
 (ns agold.cljip
-  (:require #_[config.core :as e]
+  (:require [clojure.core.async :as a]
             [clojure.java.io :as io]
+            [clojure.pprint :as pp]
             [clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
@@ -18,7 +19,7 @@
     #_:clj-kondo/ignore
     (let [resp @(http/get url)]
       (if (= (:status resp) 200)
-        {:site-data (ch/parse-string (:body resp) true)}
+        {:site-data (dissoc (ch/parse-string (:body resp) true) :ip)}
         {:site-data "N/A"}))))
 
 (def get-site-data-cached (memoize get-site-data))
@@ -53,7 +54,7 @@
   "logfname to vec of logentries with jdatetimes"
   [logfname]
   (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
-     (mapv fix-date vec-logentries)))
+    (mapv fix-date vec-logentries)))
 
 (defn add-hostname
   "adds hostname to log entry"
@@ -61,21 +62,49 @@
   (merge le (ipg/get-hostname-cached (:ip le))))
 
 (defn add-site-data
-   "add site data to log entry"
- [le]
- (merge le (get-site-data-cached (:ip le))))
+  "add site data to log entry"
+  [le]
+  (merge le (get-site-data-cached (:ip le))))
+
+(defn add-site-data-async
+  "add site data asynchronously"
+  [le result]
+  (a/go
+    (a/>! result (add-site-data le))
+    (a/close! result)))
+
+(defn add-data-async
+  "add data to log entries on input channel inch, pass to outch"
+  [inch outch]
+  (a/pipeline-async 1 outch add-site-data-async inch))
+
+(defn process-log
+  "process log file"
+  [logfname]
+  (let [vec-of-les (parse-log logfname)
+        inch (a/chan)
+        outch (a/chan)]
+    (add-data-async inch outch)
+    (a/go-loop [item (a/<! outch)]
+      (when item
+        (println item)
+        (recur (a/<! outch))))
+    (a/go (doseq [le vec-of-les]
+            (println "adding ...")
+            (a/>! inch le)))
+    #_(a/close! inch)))
 
 #_(defn greet
-  "Callable entry point to the application."
-  [data]
-  (println "conf key is: " (:API-KEY (ipg/get-config)))
-  (println "foo is" (string/lower-case "Foo"))
-  (println (str "Hello, " (or (:name data) "World") "!")))
+    "Callable entry point to the application."
+    [data]
+    (println "conf key is: " (:API-KEY (ipg/get-config)))
+    (println "foo is" (string/lower-case "Foo"))
+    (println (str "Hello, " (or (:name data) "World") "!")))
 
 #_(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (greet {:name (first args)}))
+    "I don't do a whole lot ... yet."
+    [& args]
+    (greet {:name (first args)}))
 
 #_:clj-kondo/ignore
 (comment
@@ -99,5 +128,35 @@
   (time (parse-log "/home/agold/Prog/cljip/testdata/default.log"))
   (def default-log "/home/agold/Prog/cljip/testdata/default.log")
   (map add-hostname (parse-log default-log))
-(map add-site-data (parse-log default-log))
+  (let [procd (map add-site-data (parse-log default-log))]
+    (doseq [le procd]
+      (pp/pprint le)))
+  (add-data (parse-log default-log))
+  (process-log default-log)
+  (def p-ch (a/chan))
+  (a/go (println (a/<! p-ch)))
+  (a/go (a/>! "Hello"))
+  (a/go-loop [item (a/<! p-ch)]
+    (when item
+      (println item)
+      (recur (a/<! p-ch))))
+  (a/>!! p-ch "Hello Dolly")
+
+  ;; pipeline-async example
+  (def ca> (a/chan 1))
+  (def cb> (a/chan 1))
+  (defn c-af [val result] ; notice the signature is different for `pipeline-async`, it includes a channel
+    (a/go (a/<! (a/timeout 1000))
+        (a/>! result (str val "!!!"))
+        (a/close! result)))
+  (a/pipeline-async
+   1
+   cb>
+   c-af
+   ca>)
+  (a/go (println (a/<! cb>)))
+(a/go (>! ca> "hello"))
+  (a/>!! ca> "hello")
   )
+
+
