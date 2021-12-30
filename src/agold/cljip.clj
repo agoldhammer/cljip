@@ -57,10 +57,10 @@
   (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
     (mapv fix-date vec-logentries)))
 
-(defn add-hostname
+#_(defn add-hostname
   "adds hostname to log entry"
-  [le]
-  (merge le (ipg/get-hostname-cached (:ip le))))
+  [le ch]
+  (merge le (ipg/async-get-hostname (:ip le) midch 20)))
 
 (defn add-site-data
   "add site data to log entry"
@@ -72,21 +72,27 @@
   [le result]
   (a/go
     (a/>! result (add-site-data le))
+     ;; TODO removing below line produces only first log entry in seq, why??
     (a/close! result)))
 
 (defn add-hostname-async
   "add hostname asynchronously"
   [le result]
-  (a/go
-    #_(a/>! result (add-hostname le))
-    (a/>! result (merge le {:hostname "dummy"}))
-    (a/close! result)))
+  (let [hn-chan (a/chan 20)]
+    (a/go
+      #_(a/>! result (merge le (ipg/async-get-hostname (:ip le) hn-chan 20)))
+      (a/>! result (merge le {:hostname "dummy"}))
+     ;; TODO removing below line produces only first log entry in seq, why??
+      (a/close! result))))
 
 (defn add-data-async
   "add data to log entries on input channel inch, pass to outch"
   [inch midch outch]
+
   (a/pipeline-async 8 midch add-hostname-async inch)
-  (a/pipeline-async 8 outch add-site-data-async midch))
+  (a/pipeline-async 8 outch add-site-data-async midch)
+  #_(a/pipeline-async 8 outch add-site-data-async inch)
+  )
 
 (defn process-log
   "process log file"
@@ -103,8 +109,7 @@
     (a/go (doseq [le vec-of-les]
             #_(println "adding ...")
             (a/>! inch le)))
-    :done
-    #_(a/close! inch)))
+    :done))
 
 #_:clj-kondo/ignore
 (defn proclog
