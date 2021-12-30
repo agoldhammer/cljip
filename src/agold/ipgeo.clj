@@ -47,7 +47,7 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
   ([ip resch]
    (async-get-hostname ip resch 100))
   ([ip resch max-delay]
-   (println "agh called")
+   #_(println "agh called")
    (let [hnch (a/chan 1)
          toch (a/timeout max-delay)]
      (a/go

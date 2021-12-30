@@ -58,9 +58,9 @@
     (mapv fix-date vec-logentries)))
 
 #_(defn add-hostname
-  "adds hostname to log entry"
-  [le ch]
-  (merge le (ipg/async-get-hostname (:ip le) midch 20)))
+    "adds hostname to log entry"
+    [le ch]
+    (merge le (ipg/async-get-hostname (:ip le) midch 20)))
 
 (defn add-site-data
   "add site data to log entry"
@@ -80,8 +80,10 @@
   [le result]
   (let [hn-chan (a/chan 20)]
     (a/go
-      #_(a/>! result (merge le (ipg/async-get-hostname (:ip le) hn-chan 20)))
-      (a/>! result (merge le {:hostname "dummy"}))
+     ;; get hostname with max 20 ms delay
+      (ipg/async-get-hostname (:ip le) hn-chan 20)
+      (a/>! result (merge le (a/<! hn-chan)))
+      #_(a/>! result (merge le {:hostname "dummy"}))
      ;; TODO removing below line produces only first log entry in seq, why??
       (a/close! result))))
 
@@ -91,8 +93,7 @@
 
   (a/pipeline-async 8 midch add-hostname-async inch)
   (a/pipeline-async 8 outch add-site-data-async midch)
-  #_(a/pipeline-async 8 outch add-site-data-async inch)
-  )
+  #_(a/pipeline-async 8 outch add-site-data-async inch))
 
 (defn process-log
   "process log file"
