@@ -10,7 +10,7 @@
 (defn start-print-loop
   "create print channel for pretty printing log entries"
   []
-  (let [prn-chan (a/chan)]
+  (let [prn-chan (a/chan 2048)]
     (a/go-loop [item (a/<! prn-chan)]
       (when item
         (pp/pprint item)

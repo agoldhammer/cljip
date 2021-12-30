@@ -41,6 +41,10 @@ $ curl 'https://api.ipgeolocation.io/ipgeo?apiKey=API_KEY&ip=dns.google.com
 (def get-hostname-cached (memoize get-hostname))
 
 (comment
+  (reverse-dns-lookup "8.8.8.8")
+  (reverse-dns-lookup "47.241.66.187")
+  (get-hostname "47.241.66.187")
+  (get-hostname-cached "47.241.66.187")
   (get-hostname-cached "100.35.79.95")
   ;; pool-....
   (get-hostname-cached "190.35.79.95")

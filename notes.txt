@@ -1,5 +1,10 @@
+uses https://github.com/seancorfield/build-clj
+setup with corfield new
+https://github.com/seancorfield/deps-new
+
 To run:
-clj -X:run-m agold.cljip/greet
+clj -X:run-m agold.cljip/proclog
+clj -X:run-x
 
 To run tests:
 clj -T:build test
@@ -10,3 +15,5 @@ regex from go:
 180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] "GET http://www.soso.com/ HTTP/1.1" 200 396 "-" "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36"
 
 
+color printing
+https://github.com/greglook/puget

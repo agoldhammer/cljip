@@ -74,18 +74,28 @@
     (a/>! result (add-site-data le))
     (a/close! result)))
 
+(defn add-hostname-async
+  "add hostname asynchronously"
+  [le result]
+  (a/go
+    #_(a/>! result (add-hostname le))
+    (a/>! result (merge le {:hostname "dummy"}))
+    (a/close! result)))
+
 (defn add-data-async
   "add data to log entries on input channel inch, pass to outch"
-  [inch outch]
-  (a/pipeline-async 1 outch add-site-data-async inch))
+  [inch midch outch]
+  (a/pipeline-async 8 midch add-hostname-async inch)
+  (a/pipeline-async 8 outch add-site-data-async midch))
 
 (defn process-log
   "process log file"
   [logfname]
   (let [vec-of-les (parse-log logfname)
         outch (ipp/start-print-loop)
-        inch (a/chan)]
-    (add-data-async inch outch)
+        midch (a/chan 2048)
+        inch (a/chan 2048)]
+    (add-data-async inch midch outch)
     #_(a/go-loop [item (a/<! outch)]
         (when item
           (println item)
@@ -93,19 +103,26 @@
     (a/go (doseq [le vec-of-les]
             #_(println "adding ...")
             (a/>! inch le)))
+    :done
     #_(a/close! inch)))
 
-#_(defn greet
-    "Callable entry point to the application."
-    [data]
-    (println "conf key is: " (:API-KEY (ipg/get-config)))
-    (println "foo is" (string/lower-case "Foo"))
-    (println (str "Hello, " (or (:name data) "World") "!")))
+#_:clj-kondo/ignore
+(defn proclog
+  "Callable entry point to the application."
+  [data]
+  (println "conf key is: " (:API-KEY (ipg/get-config)))
+  (println "Starting, exit after 10 secs")
+  (process-log "testdata/newer.log")
+  (a/<!! (a/timeout 10000))
+  (println "exiting")
+  (println (str "Bye, " (or (:file data) "World") "!")))
 
-#_(defn -main
-    "I don't do a whole lot ... yet."
-    [& args]
-    (greet {:name (first args)}))
+(defn -main
+  "I don't do a whole lot ... yet."
+  [& args]
+  (println (str "Starting:" (or args "No args")))
+  (process-log "testdata/newer.log")
+  (println "exiting"))
 
 #_:clj-kondo/ignore
 (comment
@@ -116,7 +133,8 @@
   ;; https://github.com/apribase/clj-dns/blob/master/src/clj_dns/core.clj
   ;; https://gist.github.com/mwchambers/1316080
   (.getCanonicalHostName (InetAddress/getByName "100.35.79.95"))
-  (.getCanonicalHostName (InetAddress/getByName "8.8.8.8"))
+  (ipg/get-hostname-cached "8.8.8.8")
+  (ipg/get-hostname-cached "47.241.66.187")
   ;; (jn/InetAddress.get-host-address "8.8.8.8")
   (re-find #"\".+" "Hello \"Dolly\"")
   (def logstr "180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] \"GET http://www.soso.com/ HTTP/1.1\" 200 396 \"-\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36\"")
@@ -132,8 +150,8 @@
   (let [procd (map add-site-data (parse-log default-log))]
     (doseq [le procd]
       (pp/pprint le)))
-  (add-data (parse-log default-log))
   (process-log default-log)
+  (process-log "testdata/newer.log")
   (def p-ch (a/chan))
   (a/go (println (a/<! p-ch)))
   (a/go (a/>! "Hello"))
@@ -141,6 +159,13 @@
     (when item
       (println item)
       (recur (a/<! p-ch))))
-  (a/>!! p-ch "Hello Dolly"))
+  (a/>!! p-ch "Hello Dolly")
+  (println (slurp "config.edn"))
+  ;; gets current working directory
+  (.getCanonicalFile (clojure.java.io/file "."))
+  (-main ""))
+
+
+
 
 
