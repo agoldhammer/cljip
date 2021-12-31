@@ -17,6 +17,17 @@
         (recur (a/<! prn-chan))))
     prn-chan))
 
+(defn le-reducer
+  "reduce seq of log entries for output:
+   reduced will be map {ip-as-string [vec of les w/o ip ...] ...}"
+  [acc log-entry]
+  (let [ip (:ip log-entry)
+        stripped-le (dissoc log-entry :ip)]
+    (println ip stripped-le)
+    (if-let [les (get acc ip)]
+      (assoc acc ip (conj les stripped-le))
+      (assoc acc ip [stripped-le]))))
+
 (comment
   (def smpl-le {:entry
                 "47.241.66.187 - - [27/Feb/2021:13:30:39 +0000] \"GET / HTTP/1.1\""
@@ -36,4 +47,7 @@
                  :district "Central Business District"}})
   (let [pch (start-print-loop)]
     (a/>!! pch smpl-le))
+  (le-reducer {} smpl-le)
+(le-reducer (le-reducer {} smpl-le) smpl-le)
+
   )

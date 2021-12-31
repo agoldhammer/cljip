@@ -17,3 +17,5 @@ regex from go:
 
 color printing
 https://github.com/greglook/puget
+
+http://danboykis.com/posts/things-i-wish-i-knew-about-core-async/

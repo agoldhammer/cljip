@@ -33,7 +33,8 @@
       (into lines (line-seq rdr)))))
 
 (defn parse-line
-  "parse line of log"
+  "parse line of log, returns basic log entry
+   w/o augmented data"
   [line]
   (let [parse-re #"(\S+).+?[\[](\S+).+?\"(.+?)\""
         parsed (re-find parse-re line)]
@@ -169,7 +170,41 @@
   (println (slurp "config.edn"))
   ;; gets current working directory
   (.getCanonicalFile (clojure.java.io/file "."))
-  (-main ""))
+
+;;; to test le-reducer
+  #_(defn test-le-reducer []
+      (let [inch (a/chan 1024)]
+        (a/go
+          (doseq [log-entry (parse-log "testdata/newer.log")]
+            (a/>! inch log-entry)))
+        (a/reduce ipp/le-reducer {} inch)))
+  #_(def out (test-le-reducer))
+  (def in (a/chan 1024))
+  (def out (a/reduce ipp/le-reducer {} in))
+  #_(doseq [log-entry (parse-log "testdata/newer.log")]
+      (a/go (a/>! in log-entry)))
+  (a/onto-chan!! in (parse-log "testdata/newer.log") false)
+  (.count (.buf in))
+  (let [in (a/chan 1024)]
+    (a/onto-chan!! in (parse-log "testdata/newer.log") false)
+    (println "loaded items" (.count (.buf in)))
+   (let [out (a/reduce ipp/le-reducer {} in)]
+     (a/close! in)
+     (println "out items" (.count (.buf out)))
+     (a/go-loop [item (a/<! out)]
+       (println item)
+       (recur (a/<! out)))))
+  (a/<!! in)
+  (.count (.buf out))
+  (a/<!! out)
+  ;; without channel works properly
+  (reduce ipp/le-reducer {} (parse-log "testdata/newer.log"))
+  (def c (a/chan 100))
+  (a/onto-chan! c (range 3) false)
+  (.count (.buf c))
+  c
+(use 'clojure.tools.trace))
+
 
 
 
