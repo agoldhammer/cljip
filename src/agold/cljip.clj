@@ -185,25 +185,38 @@
       (a/go (a/>! in log-entry)))
   (a/onto-chan!! in (parse-log "testdata/newer.log") false)
   (.count (.buf in))
-  (let [in (a/chan 1024)]
-    (a/onto-chan!! in (parse-log "testdata/newer.log") false)
+  (let [in (a/to-chan! (parse-log "testdata/newer.log"))]
     (println "loaded items" (.count (.buf in)))
-   (let [out (a/reduce ipp/le-reducer {} in)]
-     (a/close! in)
-     (println "out items" (.count (.buf out)))
-     (a/go-loop [item (a/<! out)]
-       (println item)
-       (recur (a/<! out)))))
+    (let [out (a/reduce ipp/le-reducer {} in)]
+      (a/close! in)
+      (println "out items" (.count (.buf out)))
+      (a/go-loop [item (a/<! out)]
+        (when item
+          (println item)
+          (recur (a/<! out))))))
+  (let [out (a/to-chan! (parse-log "testdata/newer.log"))
+        reducible (a/<!! out)]
+    #_(reduce ipp/le-reducer {} reducible)
+    (println reducible)
+    )
+  (def reduced-les (reduce ipp/le-reducer {} (parse-log "testdata/newer.log")))
+  reduced-les
+  (keys reduced-les)
+  (count (keys reduced-les))
   (a/<!! in)
   (.count (.buf out))
   (a/<!! out)
   ;; without channel works properly
   (reduce ipp/le-reducer {} (parse-log "testdata/newer.log"))
-  (def c (a/chan 100))
-  (a/onto-chan! c (range 3) false)
+  (def c (a/chan 1000))
+  (def out (a/into [] (a/to-chan! (parse-log "testdata/newer.log"))))
+  (a/close! c)
+  (.count (.buf out))
+  (a/<!! out)
+  (a/onto-chan! c (range 5) false)
   (.count (.buf c))
-  c
-(use 'clojure.tools.trace))
+(a/<!! (a/reduce + 0 (a/onto-chan! c (range 5) false)))
+  (use 'clojure.tools.trace))
 
 
 
