@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as a]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
-            [clojure.string :as string]
+            #_[clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
             [agold.dateparser :as dp]
@@ -13,17 +13,7 @@
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
 
 
-(defn get-site-data
-  "fetch reverse dns and geodata for ip addr"
-  [ip]
-  (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
-    #_:clj-kondo/ignore
-    (let [resp @(http/get url)]
-      (if (= (:status resp) 200)
-        {:site-data (dissoc (ch/parse-string (:body resp) true) :ip)}
-        {:site-data "N/A"}))))
 
-(def get-site-data-cached (memoize get-site-data))
 
 (defn log->vec-of-lines
   "log file to vector of lines"
@@ -49,7 +39,6 @@
   "get date part of logentry"
   [log-entry]
   (let [date (:date log-entry)]
-    #_(println date)
     (assoc log-entry :date (dp/datestr->jtime date))))
 
 (defn parse-log
@@ -63,20 +52,27 @@
     [le ch]
     (merge le (ipg/async-get-hostname (:ip le) midch 20)))
 
-(defn add-site-data
-  "add site data to log entry"
-  [le]
-  (merge le (get-site-data-cached (:ip le))))
+#_(defn get-site-data
+  "fetch reverse dns and geodata for ip addr and put on result-chan"
+  [ip result-chan]
+  (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
+    #_:clj-kondo/ignore
+    (println "debug get-site data for ip" ip)
+    (a/go (a/put! result-chan (http/get url)))))
 
-(defn add-site-data-async
+(defn get-site-data-async
   "add site data asynchronously"
-  [le result]
-  (a/go
-    (a/>! result (add-site-data le))
+  [ip result-chan]
+  (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
+    #_:clj-kondo/ignore
+    (a/go
+      (a/>! result-chan {:ip ip :site-data (http/get url)})
+   ;; will need this for decoding
+   ;; {:site-data (dissoc (ch/parse-string (:body resp) true) :ip)}
      ;; TODO removing below line produces only first log entry in seq, why??
-    (a/close! result)))
+      (a/close! result-chan))))
 
-(defn add-hostname-async
+#_(defn add-hostname-async
   "add hostname asynchronously"
   [le result]
   (let [hn-chan (a/chan 20)]
@@ -88,7 +84,7 @@
      ;; TODO removing below line produces only first log entry in seq, why??
       (a/close! result))))
 
-(defn add-data-async
+#_(defn add-data-async
   "add data to log entries on input channel inch, pass to outch"
   [inch midch outch]
 
@@ -96,22 +92,45 @@
   (a/pipeline-async 8 outch add-site-data-async midch)
   #_(a/pipeline-async 8 outch add-site-data-async inch))
 
+;; reduce-log yields reduced log, which looks is a map of
+;; log entries by ip. Looks like this:
+;; {"5.188.210.227"
+;; [{:entry "5.188.210.227 - - [30/Dec/2021:05:01:16 +0000] \"\\x05\\x01\\x00\"",
+;;   :date #object[java.time.ZonedDateTime 0x6f1e14fd "2021-12-30T05:01:16Z[GMT]"],
+;;   :req "\\x05\\x01\\x00"} ... ]
+;;   next-ip [list of parsed entries]}
+
+(defn reduce-log
+  "convert logfile to map of log entries by ip"
+  [logfname]
+  (reduce ipp/le-reducer {} (parse-log logfname)))
+
+(defn process-site-data
+  [data]
+  (let [resp @(:site-data data)]
+    #_(pp/pprint resp)
+    (if (= (:status resp) 200)
+      (pp/pprint (ch/parse-string (:body resp) true))
+      ;; (ch/parse-string (:body resp) true)
+      :site-data-missing)))
+
 (defn process-log
   "process log file"
   [logfname]
-  (let [vec-of-les (parse-log logfname)
-        outch (ipp/start-print-loop)
-        midch (a/chan 2048)
-        inch (a/chan 2048)]
-    (add-data-async inch midch outch)
-    #_(a/go-loop [item (a/<! outch)]
-        (when item
-          (println item)
-          (recur (a/<! outch))))
-    (a/go (doseq [le vec-of-les]
-            #_(println "adding ...")
-            (a/>! inch le)))
+  (let [reduced-log (reduce-log logfname)
+        ips (keys reduced-log)
+        key-chan (a/to-chan! ips)
+        resp-chan (a/chan 2048)
+        ]
+    (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
+    (println "Processing " logfname (count ips) "ip addresses")
+    (ipp/apply-to-channel process-site-data resp-chan)
     :done))
+
+(comment
+  (parse-log "testdata/newer.log")
+  (reduce-log "testdata/newer.log")
+  (process-log "testdata/newer.log"))
 
 #_:clj-kondo/ignore
 (defn proclog
@@ -133,30 +152,17 @@
 
 #_:clj-kondo/ignore
 (comment
-  (greet {:name "Art"})
-  (string/lower-case "FOO")
   (get-site-data "8.8.8.8")
   (get-site-data "71.192.181.208")
   ;; https://github.com/apribase/clj-dns/blob/master/src/clj_dns/core.clj
   ;; https://gist.github.com/mwchambers/1316080
   (.getCanonicalHostName (InetAddress/getByName "100.35.79.95"))
-  (ipg/get-hostname-cached "8.8.8.8")
-  (ipg/get-hostname-cached "47.241.66.187")
-  ;; (jn/InetAddress.get-host-address "8.8.8.8")
-  (re-find #"\".+" "Hello \"Dolly\"")
   (def logstr "180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] \"GET http://www.soso.com/ HTTP/1.1\" 200 396 \"-\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36\"")
   (re-find #"(\S+).+[\[](\S+).+?\"(.+?)\"" logstr)
   (System/getProperty "user.home")
-  (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")
-  (println (parse-line logstr))
-  (time
-   (map parse-line (log->vec-of-lines "/home/agold/Prog/cljip/testdata/default.log")))
   (time (parse-log "/home/agold/Prog/cljip/testdata/default.log"))
   (def default-log "/home/agold/Prog/cljip/testdata/default.log")
   (map add-hostname (parse-log default-log))
-  (let [procd (map add-site-data (parse-log default-log))]
-    (doseq [le procd]
-      (pp/pprint le)))
   (process-log default-log)
   (process-log "testdata/newer.log")
   (def p-ch (a/chan))
@@ -197,8 +203,7 @@
   (let [out (a/to-chan! (parse-log "testdata/newer.log"))
         reducible (a/<!! out)]
     #_(reduce ipp/le-reducer {} reducible)
-    (println reducible)
-    )
+    (println reducible))
   (def reduced-les (reduce ipp/le-reducer {} (parse-log "testdata/newer.log")))
   reduced-les
   (keys reduced-les)
@@ -215,7 +220,7 @@
   (a/<!! out)
   (a/onto-chan! c (range 5) false)
   (.count (.buf c))
-(a/<!! (a/reduce + 0 (a/onto-chan! c (range 5) false)))
+  (a/<!! (a/reduce + 0 (a/onto-chan! c (range 5) false)))
   (use 'clojure.tools.trace))
 
 

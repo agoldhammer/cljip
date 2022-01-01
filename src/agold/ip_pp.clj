@@ -3,9 +3,9 @@
             [clojure.pprint :as pp]))
 
 #_(defn pp-le-from-chan
-  "pretty print log entry from channel"
-  [pch]
-  (a/go (pp/pprint (a/<! pch))))
+    "pretty print log entry from channel"
+    [pch]
+    (a/go (pp/pprint (a/<! pch))))
 
 (defn start-print-loop
   "create print channel for pretty printing log entries"
@@ -17,13 +17,22 @@
         (recur (a/<! prn-chan))))
     prn-chan))
 
+(defn apply-to-channel
+  "apply f to items in channel ch"
+  [f ch]
+  (a/go-loop [item (a/<! ch)]
+    (when item
+      (f item)
+      (recur (a/<! ch))))
+  :apply-to-channel-closing)
+
 (defn le-reducer
   "reduce seq of log entries for output:
    reduced will be map {ip-as-string [vec of les w/o ip ...] ...}"
   [acc log-entry]
   (let [ip (:ip log-entry)
         stripped-le (dissoc log-entry :ip)]
-    (println ip stripped-le)
+    #_(println ip stripped-le)
     (if-let [les (get acc ip)]
       (assoc acc ip (conj les stripped-le))
       (assoc acc ip [stripped-le]))))
@@ -47,7 +56,7 @@
                  :district "Central Business District"}})
   (let [pch (start-print-loop)]
     (a/>!! pch smpl-le))
+  (let [ch (a/to-chan! [1 2 {:a 3}])]
+    (apply-to-channel pp/pprint ch))
   (le-reducer {} smpl-le)
-(le-reducer (le-reducer {} smpl-le) smpl-le)
-
-  )
+  (le-reducer (le-reducer {} smpl-le) smpl-le))
