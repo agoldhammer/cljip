@@ -120,15 +120,16 @@
 
       #_(pp/pprint resp)
       (println "processing ip " ip)
+      (println mapped-body)
       (if (= status 200)
-        (merge reduced-log ip {:site-data (dissoc mapped-body :ip)})
-        (assoc reduced-log ip {:site-data "missing"})))))
+        (swap! reduced-log assoc-in [ip :site-data] (dissoc mapped-body :ip))
+        (swap! reduced-log assoc-in [ip :site-data] "missing")))))
 
 (defn process-log
   "process log file"
   [logfname]
-  (let [reduced-log (reduce-log logfname)
-        ips (keys reduced-log)
+  (let [reduced-log (atom (reduce-log logfname))
+        ips (keys @reduced-log)
         key-chan (a/to-chan! ips)
         resp-chan (a/chan 2048)]
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
@@ -139,6 +140,7 @@
     :done))
 
 (comment
+  (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
   (process-log "testdata/newer.log"))
