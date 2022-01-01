@@ -53,12 +53,12 @@
     (merge le (ipg/async-get-hostname (:ip le) midch 20)))
 
 #_(defn get-site-data
-  "fetch reverse dns and geodata for ip addr and put on result-chan"
-  [ip result-chan]
-  (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
-    #_:clj-kondo/ignore
-    (println "debug get-site data for ip" ip)
-    (a/go (a/put! result-chan (http/get url)))))
+    "fetch reverse dns and geodata for ip addr and put on result-chan"
+    [ip result-chan]
+    (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
+      #_:clj-kondo/ignore
+      (println "debug get-site data for ip" ip)
+      (a/go (a/put! result-chan (http/get url)))))
 
 (defn get-site-data-async
   "add site data asynchronously"
@@ -73,28 +73,31 @@
       (a/close! result-chan))))
 
 #_(defn add-hostname-async
-  "add hostname asynchronously"
-  [le result]
-  (let [hn-chan (a/chan 20)]
-    (a/go
+    "add hostname asynchronously"
+    [le result]
+    (let [hn-chan (a/chan 20)]
+      (a/go
      ;; get hostname with max 20 ms delay
-      (ipg/async-get-hostname (:ip le) hn-chan 20)
-      (a/>! result (merge le (a/<! hn-chan)))
-      #_(a/>! result (merge le {:hostname "dummy"}))
+        (ipg/async-get-hostname (:ip le) hn-chan 20)
+        (a/>! result (merge le (a/<! hn-chan)))
+        #_(a/>! result (merge le {:hostname "dummy"}))
      ;; TODO removing below line produces only first log entry in seq, why??
-      (a/close! result))))
+        (a/close! result))))
 
 #_(defn add-data-async
-  "add data to log entries on input channel inch, pass to outch"
-  [inch midch outch]
+    "add data to log entries on input channel inch, pass to outch"
+    [inch midch outch]
 
-  (a/pipeline-async 8 midch add-hostname-async inch)
-  (a/pipeline-async 8 outch add-site-data-async midch)
-  #_(a/pipeline-async 8 outch add-site-data-async inch))
+    (a/pipeline-async 8 midch add-hostname-async inch)
+    (a/pipeline-async 8 outch add-site-data-async midch)
+    #_(a/pipeline-async 8 outch add-site-data-async inch))
 
 ;; reduce-log yields reduced log, which looks is a map of
 ;; log entries by ip. Looks like this:
 ;; {"5.188.210.227"
+;;    {events: vec-of events}
+;;    eventually to be added: {:site data {...}}
+;; vec-of-events looks like:
 ;; [{:entry "5.188.210.227 - - [30/Dec/2021:05:01:16 +0000] \"\\x05\\x01\\x00\"",
 ;;   :date #object[java.time.ZonedDateTime 0x6f1e14fd "2021-12-30T05:01:16Z[GMT]"],
 ;;   :req "\\x05\\x01\\x00"} ... ]
@@ -106,13 +109,20 @@
   (reduce ipp/le-reducer {} (parse-log logfname)))
 
 (defn process-site-data
-  [data]
-  (let [resp @(:site-data data)]
-    #_(pp/pprint resp)
-    (if (= (:status resp) 200)
-      (pp/pprint (ch/parse-string (:body resp) true))
-      ;; (ch/parse-string (:body resp) true)
-      :site-data-missing)))
+  "data is of form {:ip ip-as-string :site-data pending-http-response}"
+  [data reduced-log]
+  (a/go
+    (let [resp @(:site-data data)
+          status (:status resp)
+          ip (:ip data)
+          body (:body resp)
+          mapped-body (ch/parse-string body true)]
+
+      #_(pp/pprint resp)
+      (println "processing ip " ip)
+      (if (= status 200)
+        (merge reduced-log ip {:site-data (dissoc mapped-body :ip)})
+        (assoc reduced-log ip {:site-data "missing"})))))
 
 (defn process-log
   "process log file"
@@ -120,11 +130,12 @@
   (let [reduced-log (reduce-log logfname)
         ips (keys reduced-log)
         key-chan (a/to-chan! ips)
-        resp-chan (a/chan 2048)
-        ]
+        resp-chan (a/chan 2048)]
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
-    (ipp/apply-to-channel process-site-data resp-chan)
+    (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
+    (a/<!! (a/timeout 5000))
+    (pp/pprint reduced-log)
     :done))
 
 (comment
