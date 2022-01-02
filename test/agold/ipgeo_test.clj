@@ -7,7 +7,7 @@
   (testing "config loading"
     (is (not (nil? (:API-KEY (ipg/get-config)))))))
 
-(deftest dns-test
+#_(deftest dns-test
   (testing "reverse dns if host exists"
     (is (= (ipg/get-hostname "100.35.79.95")
            {:hostname "pool-100-35-79-95.nwrknj.fios.verizon.net"})))

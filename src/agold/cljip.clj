@@ -47,21 +47,9 @@
   (let [vec-logentries (mapv parse-line (log->vec-of-lines logfname))]
     (mapv fix-date vec-logentries)))
 
-#_(defn add-hostname
-    "adds hostname to log entry"
-    [le ch]
-    (merge le (ipg/async-get-hostname (:ip le) midch 20)))
-
-#_(defn get-site-data
-    "fetch reverse dns and geodata for ip addr and put on result-chan"
-    [ip result-chan]
-    (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
-      #_:clj-kondo/ignore
-      (println "debug get-site data for ip" ip)
-      (a/go (a/put! result-chan (http/get url)))))
 
 (defn get-site-data-async
-  "add site data asynchronously"
+  "add site data asynchronously, af fn for pipeline"
   [ip result-chan]
   (let [url (str ipgeo "?apiKey=" ipg/API-KEY "&ip=" ip "&fields=geo")]
     #_:clj-kondo/ignore
@@ -72,25 +60,6 @@
      ;; TODO removing below line produces only first log entry in seq, why??
       (a/close! result-chan))))
 
-#_(defn add-hostname-async
-    "add hostname asynchronously"
-    [le result]
-    (let [hn-chan (a/chan 20)]
-      (a/go
-     ;; get hostname with max 20 ms delay
-        (ipg/async-get-hostname (:ip le) hn-chan 20)
-        (a/>! result (merge le (a/<! hn-chan)))
-        #_(a/>! result (merge le {:hostname "dummy"}))
-     ;; TODO removing below line produces only first log entry in seq, why??
-        (a/close! result))))
-
-#_(defn add-data-async
-    "add data to log entries on input channel inch, pass to outch"
-    [inch midch outch]
-
-    (a/pipeline-async 8 midch add-hostname-async inch)
-    (a/pipeline-async 8 outch add-site-data-async midch)
-    #_(a/pipeline-async 8 outch add-site-data-async inch))
 
 ;; reduce-log yields reduced log, which looks is a map of
 ;; log entries by ip. Looks like this:
@@ -119,8 +88,8 @@
           mapped-body (ch/parse-string body true)]
 
       #_(pp/pprint resp)
-      (println "processing ip " ip)
-      (println mapped-body)
+      #_(println "processing ip " ip)
+      #_(println mapped-body)
       (if (= status 200)
         (swap! reduced-log assoc-in [ip :site-data] (dissoc mapped-body :ip))
         (swap! reduced-log assoc-in [ip :site-data] "missing")))))
@@ -136,7 +105,8 @@
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
     (a/<!! ipp/exit-chan)
-  (pp/pprint reduced-log)
+    #_(a/<!! (a/timeout 5000))
+    (pp/pprint @reduced-log)
     :done))
 
 (comment

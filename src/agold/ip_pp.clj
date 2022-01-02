@@ -66,3 +66,38 @@
   (get-in (le-reducer {} smpl-le) ["47.241.66.187" :events])
   (le-reducer (le-reducer {} smpl-le) smpl-le)
   (get-in (le-reducer (le-reducer {} smpl-le) smpl-le) ["47.241.66.187" :events]))
+
+(defn pp-reduced-log-entry
+  "pretty print reduced log entry rle"
+  [rle]
+  (let [ip (first (keys rle))
+        data (get rle ip)
+        events (:events data)
+        sd (:site-data data)]
+    (pp/pprint (str "ip: " ip))
+    (pp/pprint sd)
+    (doseq [event events] (pp/pprint event))))
+
+(comment
+  ;; this is a reduced log entry
+  (def smpl-rle
+    {"35.233.62.116"
+     {:events
+      [{:entry
+        "35.233.62.116 - - [30/Dec/2021:12:18:33 +0000] \"GET / HTTP/1.1\""
+        :date
+        "dummy date"
+        :req "GET / HTTP/1.1"}]
+      :site-data
+      {:country_code2 "US"
+       :city "Mountain View"
+       :longitude "-122.08421"
+       :zipcode "94043-1351"
+       :country_name "United States"
+       :country_code3 "USA"
+       :latitude "37.42240"
+       :state_prov "California"
+       :district ""}}})
+  (:site-data (get smpl-rle "35.233.62.116"))
+  (pp/pprint smpl-rle)
+  (pp-reduced-log-entry smpl-rle))
