@@ -2,6 +2,8 @@
   (:require [clojure.core.async :as a]
             [clojure.pprint :as pp]))
 
+(def exit-chan (a/chan))
+
 #_(defn pp-le-from-chan
     "pretty print log entry from channel"
     [pch]
@@ -21,10 +23,11 @@
   "apply f (fn of 1 var) to each item in channel ch"
   [f ch]
   (a/go-loop [item (a/<! ch)]
-    (when item
-      (f item)
-      (recur (a/<! ch))))
-  :apply-to-channel-closing)
+    (if (nil? item)
+      (a/>! exit-chan :exit-apc)
+      (do
+        (f item)
+        (recur (a/<! ch))))))
 
 #_(defn le-reducer
     "reduce seq of log entries for output:

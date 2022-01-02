@@ -135,8 +135,8 @@
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
-    (a/<!! (a/timeout 5000))
-    (pp/pprint reduced-log)
+    (a/<!! ipp/exit-chan)
+  (pp/pprint reduced-log)
     :done))
 
 (comment
