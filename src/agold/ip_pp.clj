@@ -67,18 +67,48 @@
   (le-reducer (le-reducer {} smpl-le) smpl-le)
   (get-in (le-reducer (le-reducer {} smpl-le) smpl-le) ["47.241.66.187" :events]))
 
+(defn site-data->strings
+  "convert site data to a vector of strings"
+  [data]
+  (let [{:keys [country_code2 country_name city state_prov
+                district latitude longitude]} data
+        line1 (str country_name "(" country_code2 ")")
+        line2 (str city ", " state_prov (when (not= "" district) (str " district: " district)))
+        line3 (str "lat: " latitude " lon: " longitude)]
+    [line1 line2 line3]))
+
 (defn pp-reduced-log-entry
   "pretty print reduced log entry rle"
-  [rle]
-  (let [ip (first (keys rle))
-        data (get rle ip)
-        events (:events data)
-        sd (:site-data data)]
+  [ip data]
+  (let [events (:events data)
+        sd (:site-data data)
+        sd-lines (site-data->strings sd)]
     (pp/pprint (str "ip: " ip))
-    (pp/pprint sd)
-    (doseq [event events] (pp/pprint event))))
+    (doseq [line sd-lines]
+      (pp/pprint line))
+    (doseq [event events] (pp/pprint event))
+    (println "---")))
+
+(defn pp-reduced-log
+  "pretty print reduced log"
+  [rl]
+  (doseq [[ip data] rl]
+    (pp-reduced-log-entry ip data)))
 
 (comment
+  ;; sample site-data
+  (def smpl-sd {:country_code2 "US"
+                :city "Mountain View"
+                :longitude "-122.08421"
+                :zipcode "94043-1351"
+                :country_name "United States"
+                :country_code3 "USA"
+                :latitude "37.42240"
+                :state_prov "California"
+                :district ""})
+
+
+  (site-data->strings smpl-sd)
   ;; this is a reduced log entry
   (def smpl-rle
     {"35.233.62.116"
@@ -98,6 +128,29 @@
        :latitude "37.42240"
        :state_prov "California"
        :district ""}}})
+
+  (def smpl-rle2 {"35.89.25.35"
+                  {:events
+                   [{:entry
+                     "35.89.25.35 - - [30/Dec/2021:03:06:04 +0000] \"GET /favicon.ico HTTP/1.1\""
+                     :date
+                     "dummy date1"
+                     :req "GET /favicon.ico HTTP/1.1"}
+                    {:entry
+                     "35.89.25.35 - - [30/Dec/2021:03:06:05 +0000] \"GET / HTTP/1.1\""
+                     :date
+                     "dummy date2"
+                     :req "GET / HTTP/1.1"}]
+                   :site-data
+                   {:country_code2 "US"
+                    :city ""
+                    :longitude "-123.04381"
+                    :zipcode ""
+                    :country_name "United States"
+                    :country_code3 "USA"
+                    :latitude "44.93326"
+                    :state_prov "Oregon"
+                    :district ""}}})
   (:site-data (get smpl-rle "35.233.62.116"))
   (pp/pprint smpl-rle)
-  (pp-reduced-log-entry smpl-rle))
+  #_(pp-reduced-log-entry smpl-rle2))

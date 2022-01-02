@@ -105,8 +105,9 @@
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
     (a/<!! ipp/exit-chan)
-    #_(a/<!! (a/timeout 5000))
-    (pp/pprint @reduced-log)
+    (a/<!! (a/timeout 5000))
+    #_(pp/pprint @reduced-log)
+    (ipp/pp-reduced-log @reduced-log)
     :done))
 
 (comment
