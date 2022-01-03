@@ -1,7 +1,7 @@
 (ns agold.cljip
   (:require [clojure.core.async :as a]
             [clojure.java.io :as io]
-            [clojure.pprint :as pp]
+            #_[clojure.pprint :as pp]
             #_[clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
@@ -104,8 +104,20 @@
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
-    (a/<!! ipp/exit-chan)
-    (a/<!! (a/timeout 5000))
+    (loop [exit? (a/poll! ipp/exit-chan)]
+      (println "exit flag " exit?)
+      (when (not exit?)
+        (println "waitint on exit")
+        (a/<!! (a/timeout 500))
+        (recur (a/poll! ipp/exit-chan))))
+    ;; (println "polling wait-chan " (a/poll! wait-chan))
+    ;; (a/<!! (a/timeout 5000))
+    ;; (println "polling wait-chan " (a/poll! wait-chan))
+    #_(loop [flag (a/poll! wait-chan)]
+      (when (not= :wait-done flag)
+        (println "waiting")
+        (a/<!! (a/timeout 500))
+        (recur (a/poll! wait-chan))) )
     #_(pp/pprint @reduced-log)
     (ipp/pp-reduced-log @reduced-log)
     :done))
@@ -114,7 +126,9 @@
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
-  (process-log "testdata/newer.log"))
+  (process-log "testdata/newer.log")
+  (time (process-log "testdata/newer.log"))
+  (a/poll! ipp/exit-chan))
 
 #_:clj-kondo/ignore
 (defn proclog
@@ -123,7 +137,7 @@
   (println "conf key is: " (:API-KEY (ipg/get-config)))
   (println "Starting, exit after 10 secs")
   (process-log "testdata/newer.log")
-  (a/<!! (a/timeout 10000))
+  #_(a/<!! (a/timeout 10000))
   (println "exiting")
   (println (str "Bye, " (or (:file data) "World") "!")))
 
@@ -138,73 +152,16 @@
 (comment
   (get-site-data "8.8.8.8")
   (get-site-data "71.192.181.208")
-  ;; https://github.com/apribase/clj-dns/blob/master/src/clj_dns/core.clj
-  ;; https://gist.github.com/mwchambers/1316080
-  (.getCanonicalHostName (InetAddress/getByName "100.35.79.95"))
+  
   (def logstr "180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] \"GET http://www.soso.com/ HTTP/1.1\" 200 396 \"-\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36\"")
   (re-find #"(\S+).+[\[](\S+).+?\"(.+?)\"" logstr)
   (System/getProperty "user.home")
   (time (parse-log "/home/agold/Prog/cljip/testdata/default.log"))
   (def default-log "/home/agold/Prog/cljip/testdata/default.log")
-  (map add-hostname (parse-log default-log))
-  (process-log default-log)
-  (process-log "testdata/newer.log")
-  (def p-ch (a/chan))
-  (a/go (println (a/<! p-ch)))
-  (a/go (a/>! "Hello"))
-  (a/go-loop [item (a/<! p-ch)]
-    (when item
-      (println item)
-      (recur (a/<! p-ch))))
-  (a/>!! p-ch "Hello Dolly")
-  (println (slurp "config.edn"))
   ;; gets current working directory
   (.getCanonicalFile (clojure.java.io/file "."))
 
-;;; to test le-reducer
-  #_(defn test-le-reducer []
-      (let [inch (a/chan 1024)]
-        (a/go
-          (doseq [log-entry (parse-log "testdata/newer.log")]
-            (a/>! inch log-entry)))
-        (a/reduce ipp/le-reducer {} inch)))
-  #_(def out (test-le-reducer))
-  (def in (a/chan 1024))
-  (def out (a/reduce ipp/le-reducer {} in))
-  #_(doseq [log-entry (parse-log "testdata/newer.log")]
-      (a/go (a/>! in log-entry)))
-  (a/onto-chan!! in (parse-log "testdata/newer.log") false)
-  (.count (.buf in))
-  (let [in (a/to-chan! (parse-log "testdata/newer.log"))]
-    (println "loaded items" (.count (.buf in)))
-    (let [out (a/reduce ipp/le-reducer {} in)]
-      (a/close! in)
-      (println "out items" (.count (.buf out)))
-      (a/go-loop [item (a/<! out)]
-        (when item
-          (println item)
-          (recur (a/<! out))))))
-  (let [out (a/to-chan! (parse-log "testdata/newer.log"))
-        reducible (a/<!! out)]
-    #_(reduce ipp/le-reducer {} reducible)
-    (println reducible))
-  (def reduced-les (reduce ipp/le-reducer {} (parse-log "testdata/newer.log")))
-  reduced-les
-  (keys reduced-les)
-  (count (keys reduced-les))
-  (a/<!! in)
-  (.count (.buf out))
-  (a/<!! out)
-  ;; without channel works properly
-  (reduce ipp/le-reducer {} (parse-log "testdata/newer.log"))
-  (def c (a/chan 1000))
-  (def out (a/into [] (a/to-chan! (parse-log "testdata/newer.log"))))
-  (a/close! c)
-  (.count (.buf out))
-  (a/<!! out)
-  (a/onto-chan! c (range 5) false)
-  (.count (.buf c))
-  (a/<!! (a/reduce + 0 (a/onto-chan! c (range 5) false)))
+  
   (use 'clojure.tools.trace))
 
 

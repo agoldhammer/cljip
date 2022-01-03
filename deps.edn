@@ -3,6 +3,7 @@
         org.clojure/core.async {:mvn/version "1.5.648"}
         yogthos/config {:mvn/version "1.1.9"}
         cheshire/cheshire {:mvn/version "5.10.1"}
+        io.aviso/pretty {:mvn/version "1.1.1"}
         http-kit/http-kit {:mvn/version "2.5.3"}}
  :aliases
  {:run-m {:main-opts ["-m" "agold.cljip"]}
