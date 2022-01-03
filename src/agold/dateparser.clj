@@ -4,6 +4,8 @@
 
 #_{:clj-kondo/ignore [:unresolved-namespace]}
 (def formatter (DateTimeFormatter/ofPattern "yyyyMMdd:HHmmss z"))
+#_{:clj-kondo/ignore [:unresolved-namespace]}
+(def out-formatter (DateTimeFormatter/ofPattern "dd-MM-yyyy HH:mm:ssZ"))
 
 (def month-map
   {"Jan" "01" "Feb" "02" "Mar" "03" "Apr" "04" "May" "05" "Jun" "06"
@@ -25,10 +27,17 @@
   [datestr]
   (ZonedDateTime/parse (datestr->yyyyMMdd datestr) formatter))
 
+(defn jtime->datestr
+  "converts Java ZonedDateTime to string"
+  [zdt]
+  (.format out-formatter zdt))
+
 (comment
   (def datestr "27/Feb/2021:00:58:22")
   (re-find #"(\S+)/(\S+)/(\S+?):(\S+):(\S+):(\S+)" datestr)
   (datestr->yyyyMMdd "27/Feb/2021:00:58:22")
   (ZonedDateTime/parse "20210727:005822 GMT+00:00" formatter)
   (datestr->jtime "27/Feb/2021:00:58:22")
+  (println (.format out-formatter (datestr->jtime "27/Feb/2021:00:58:22")))
+  (jtime->datestr (datestr->jtime "27/Feb/2021:00:58:22"))
   )

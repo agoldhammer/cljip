@@ -108,6 +108,7 @@
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
+  (process-log "testdata/short.log")
   (process-log "testdata/newer.log")
   (time (process-log "testdata/newer.log"))
   (a/poll! ipp/exit-chan))
@@ -126,7 +127,7 @@
   "I don't do a whole lot ... yet."
   [& args]
   (println (str "Starting:" (or args "No args")))
-  (process-log "testdata/newer.log")
+  (process-log "testdata/small.log")
   (println "exiting"))
 
 #_:clj-kondo/ignore
