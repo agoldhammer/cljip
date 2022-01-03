@@ -127,7 +127,10 @@
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
   (process-log "testdata/newer.log")
+<<<<<<< HEAD
   (time (process-log "testdata/newer.log"))
+=======
+>>>>>>> def2b73aba0246d1b562e3a4d477f76bf1a1285d
   (a/poll! ipp/exit-chan))
 
 #_:clj-kondo/ignore
