@@ -1,8 +1,6 @@
 (ns agold.cljip
   (:require [clojure.core.async :as a]
             [clojure.java.io :as io]
-            #_[clojure.pprint :as pp]
-            #_[clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
             [agold.dateparser :as dp]
@@ -11,9 +9,6 @@
   (:gen-class))
 
 (defonce ipgeo "https://api.ipgeolocation.io/ipgeo")
-
-
-
 
 (defn log->vec-of-lines
   "log file to vector of lines"
@@ -86,10 +81,6 @@
           ip (:ip data)
           body (:body resp)
           mapped-body (ch/parse-string body true)]
-
-      #_(pp/pprint resp)
-      #_(println "processing ip " ip)
-      #_(println mapped-body)
       (if (= status 200)
         (swap! reduced-log assoc-in [ip :site-data] (dissoc mapped-body :ip))
         (swap! reduced-log assoc-in [ip :site-data] "missing")))))
@@ -110,15 +101,6 @@
         (println "waitint on exit")
         (a/<!! (a/timeout 500))
         (recur (a/poll! ipp/exit-chan))))
-    ;; (println "polling wait-chan " (a/poll! wait-chan))
-    ;; (a/<!! (a/timeout 5000))
-    ;; (println "polling wait-chan " (a/poll! wait-chan))
-    #_(loop [flag (a/poll! wait-chan)]
-      (when (not= :wait-done flag)
-        (println "waiting")
-        (a/<!! (a/timeout 500))
-        (recur (a/poll! wait-chan))) )
-    #_(pp/pprint @reduced-log)
     (ipp/pp-reduced-log @reduced-log)
     :done))
 
@@ -127,10 +109,7 @@
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
   (process-log "testdata/newer.log")
-<<<<<<< HEAD
   (time (process-log "testdata/newer.log"))
-=======
->>>>>>> def2b73aba0246d1b562e3a4d477f76bf1a1285d
   (a/poll! ipp/exit-chan))
 
 #_:clj-kondo/ignore
@@ -140,7 +119,6 @@
   (println "conf key is: " (:API-KEY (ipg/get-config)))
   (println "Starting, exit after 10 secs")
   (process-log "testdata/newer.log")
-  #_(a/<!! (a/timeout 10000))
   (println "exiting")
   (println (str "Bye, " (or (:file data) "World") "!")))
 
