@@ -1,7 +1,7 @@
 (ns agold.cljip
   (:require [clojure.core.async :as a]
             [clojure.java.io :as io]
-            [clojure.pprint :as pp]
+            #_[clojure.pprint :as pp]
             #_[clojure.string :as string]
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
@@ -104,8 +104,20 @@
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
-    (a/<!! ipp/exit-chan)
-    (a/<!! (a/timeout 5000))
+    (loop [exit? (a/poll! ipp/exit-chan)]
+      (println "exit flag " exit?)
+      (when (not exit?)
+        (println "waitint on exit")
+        (a/<!! (a/timeout 500))
+        (recur (a/poll! ipp/exit-chan))))
+    ;; (println "polling wait-chan " (a/poll! wait-chan))
+    ;; (a/<!! (a/timeout 5000))
+    ;; (println "polling wait-chan " (a/poll! wait-chan))
+    #_(loop [flag (a/poll! wait-chan)]
+      (when (not= :wait-done flag)
+        (println "waiting")
+        (a/<!! (a/timeout 500))
+        (recur (a/poll! wait-chan))) )
     #_(pp/pprint @reduced-log)
     (ipp/pp-reduced-log @reduced-log)
     :done))
@@ -114,7 +126,8 @@
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
-  (process-log "testdata/newer.log"))
+  (process-log "testdata/newer.log")
+  (a/poll! ipp/exit-chan))
 
 #_:clj-kondo/ignore
 (defn proclog

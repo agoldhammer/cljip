@@ -1,15 +1,29 @@
 (ns agold.ip-pp
   (:require [clojure.core.async :as a]
+            [io.aviso.ansi :as ansi]
             [clojure.pprint :as pp]))
 
-(def exit-chan (a/chan))
+(def exit-chan (a/chan 1))
 
-#_(defn pp-le-from-chan
-    "pretty print log entry from channel"
-    [pch]
-    (a/go (pp/pprint (a/<! pch))))
+#_(defn wait-counter
+  "returns a fn f of two vars
+   optype :incr or :decr
+   val amount to increase or decrease the weight count
+   on :decr, if count reaches zero, send msg :wait-done on wait-chan"
+  [wait-chan]
+  (let [counter (atom 0)]
+    (fn [optype val]
+      #_(println "optype, val, counter" optype val @counter)
+      (cond
+        (= optype :incr) (swap! counter + val)
+        (= optype :decr) (do (swap! counter - val)
+                             (when (zero? @counter)
+                               #_(println "ctr is 0")
+                               (a/offer! wait-chan :wait-done)))
+        :else (throw IllegalArgumentException)))))
 
-(defn start-print-loop
+
+#_(defn start-print-loop
   "create print channel for pretty printing log entries"
   []
   (let [prn-chan (a/chan 2048)]
@@ -24,7 +38,7 @@
   [f ch]
   (a/go-loop [item (a/<! ch)]
     (if (nil? item)
-      (a/>! exit-chan :exit-apc)
+      (a/offer! exit-chan :exit-apc)
       (do
         (f item)
         (recur (a/<! ch))))))
@@ -58,7 +72,7 @@
                 :date
                 "date object here"
                 :req "GET / HTTP/1.1"})
-  (let [pch (start-print-loop)]
+  #_(let [pch (start-print-loop)]
     (a/>!! pch smpl-le))
   (let [ch (a/to-chan! [1 2 {:a 3}])]
     (apply-to-channel pp/pprint ch))
@@ -83,7 +97,7 @@
   (let [events (:events data)
         sd (:site-data data)
         sd-lines (site-data->strings sd)]
-    (pp/pprint (str "ip: " ip))
+    (pp/pprint (ansi/bold-yellow (str "ip: " ip)))
     (doseq [line sd-lines]
       (pp/pprint line))
     (doseq [event events] (pp/pprint event))
@@ -151,6 +165,10 @@
                     :latitude "44.93326"
                     :state_prov "Oregon"
                     :district ""}}})
+  ;; font coloring does not work in Calva output window
   (:site-data (get smpl-rle "35.233.62.116"))
   (pp/pprint smpl-rle)
-  #_(pp-reduced-log-entry smpl-rle2))
+  (println (str "test " (ansi/red "yellow")))
+  (ansi/red "red")
+  (println (str "should be bold yellow " ansi/bold-yellow-font "bold yellow"))
+  (pp-reduced-log-entry "35.89.25.35" (get smpl-rle2 "35.89.25.35")))
