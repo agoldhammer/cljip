@@ -74,7 +74,8 @@
   (reduce ipp/le-reducer {} (parse-log logfname)))
 
 (defn process-site-data
-  "data is of form {:ip ip-as-string :site-data pending-http-response}"
+  "data is of form {:ip ip-as-string :hostname hname
+   :site-data pending-http-response}"
   [data reduced-log]
   (a/go
     (let [resp @(:site-data data)
@@ -96,6 +97,9 @@
         dns-chan (a/chan 2048)
         ;; thread pool for rev dns lookups
         #_#_thread-pool (rd/make-thread-pool 5)]
+    ;;;
+
+    ;;;
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
@@ -110,19 +114,28 @@
         (a/<!! (a/timeout 500))
         (recur (a/poll! ipp/exit-chan))))
     (ipp/pp-reduced-log @reduced-log)
+    #_(rd/rdns-with-timeout)
+    (println "doing host lookups")
+    (a/pipeline-async 4 dns-chan #(rd/rdns-with-timeout %1 10 %2) (a/to-chan! ips))
+    (println "waiting on host lookups")
+    (doseq [host (a/<!! (a/into [] dns-chan))]
+      (println host))
+
     #_(a/go-loop [item (a/<! dns-chan)]
         (when item
           (println item)
           (recur (a/<! dns-chan))))
-    (println "first reverse" (rd/reverse-dns-lookup (first ips)))
     #_(.shutdown thread-pool)
-    :done))
+  :done))
 
 (comment
+  ;; alternative reverse ip rapidapi.com/neutrinoapi/api/ip-info
+  "478a5916c6mshe97fafc72afc0e2p1063f6jsnd92221cb1bf6"
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")
   (process-log "testdata/short.log")
+  (process-log "testdata/acc2022-04-01.log")
   (process-log "testdata/newer.log")
   (time (process-log "testdata/newer.log"))
   (a/poll! ipp/exit-chan))
