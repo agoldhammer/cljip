@@ -129,8 +129,7 @@
   :done))
 
 (comment
-  ;; alternative reverse ip rapidapi.com/neutrinoapi/api/ip-info
-  "478a5916c6mshe97fafc72afc0e2p1063f6jsnd92221cb1bf6"
+  
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
   (reduce-log "testdata/newer.log")

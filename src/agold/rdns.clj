@@ -25,7 +25,8 @@
                      (fn []
                        (reverse-dns-lookup ip)))
                    vec-of-ips)]
-    (doseq [fut (.invokeAll pool tasks)]
+    (.invokeAll pool tasks)
+    #_(doseq [fut (.invokeAll pool tasks)]
       (try
         (println (.get fut timeout TimeUnit/MILLISECONDS))
         (catch Exception e (ex-info "wrapper err" {:ip "unk"} e))))))
@@ -79,4 +80,4 @@
 (time
    (let [ips ["39.104.69.228" "71.192.181.208" "124.88.55.27" "180.95.238.249"
               "175.184.164.215" "180.95.231.214"]]
-     (ips->hosts ips 2 10)))
+     (ips->hosts ips 8 10)))
