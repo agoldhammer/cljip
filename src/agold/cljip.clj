@@ -4,6 +4,7 @@
             [cheshire.core :as ch]
             [org.httpkit.client :as http]
             [agold.dateparser :as dp]
+            [agold.rdns :as rd]
             [agold.ipgeo :as ipg]
             [agold.ip-pp :as ipp])
   (:gen-class))
@@ -91,17 +92,30 @@
   (let [reduced-log (atom (reduce-log logfname))
         ips (keys @reduced-log)
         key-chan (a/to-chan! ips)
-        resp-chan (a/chan 2048)]
+        resp-chan (a/chan 2048)
+        dns-chan (a/chan 2048)
+        ;; thread pool for rev dns lookups
+        #_#_thread-pool (rd/make-thread-pool 5)]
     (a/pipeline-async 8 resp-chan get-site-data-async key-chan)
     (println "Processing " logfname (count ips) "ip addresses")
     (ipp/apply-to-channel #(process-site-data % reduced-log) resp-chan)
+    ;; TODO for testing, remove later
+    #_(doseq [ip ips]
+        (rd/async-wrapper thread-pool dns-chan rd/reverse-dns-lookup ip))
+
     (loop [exit? (a/poll! ipp/exit-chan)]
       (println "exit flag " exit?)
       (when (not exit?)
-        (println "waitint on exit")
+        (println "waiting on exit")
         (a/<!! (a/timeout 500))
         (recur (a/poll! ipp/exit-chan))))
     (ipp/pp-reduced-log @reduced-log)
+    #_(a/go-loop [item (a/<! dns-chan)]
+        (when item
+          (println item)
+          (recur (a/<! dns-chan))))
+    (println "first reverse" (rd/reverse-dns-lookup (first ips)))
+    #_(.shutdown thread-pool)
     :done))
 
 (comment
@@ -113,10 +127,34 @@
   (time (process-log "testdata/newer.log"))
   (a/poll! ipp/exit-chan))
 
+#_(comment
+  (let [dns-chan (a/chan 2048)
+        thread-pool (rd/make-thread-pool 5)
+        ips ["71.192.181.208" "180.95.231.214" "175.184.164.215"]]
+    (doseq [ip ips]
+      (println "adding " ip)
+      #_(rd/async-wrapper thread-pool dns-chan rd/reverse-dns-lookup ip)
+      #_(rd/async-wrapper thread-pool dns-chan (fn [ip] (str "ip is: " ip)) ip))
+    (a/go-loop [item (a/<! dns-chan)]
+      (when item
+        (println item)
+        (Thread/sleep 1000)
+        (recur (a/<! dns-chan))))
+    (Thread/sleep 5000)
+    (.shutdown thread-pool))
+  
+  (def ips (keys (reduce-log "testdata/short.log")))
+  (count ips)
+  (pmap rd/reverse-dns-lookup ips)
+
+  (map  rd/reverse-dns-lookup ["71.192.181.208" "180.95.231.214" "175.184.164.215"])
+  (time (rd/reverse-dns-lookup "71.192.181.208"))
+  (time (rd/reverse-dns-lookup "180.95.231.214")))
+
 #_:clj-kondo/ignore
 (defn proclog
   "Callable entry point to the application."
-  [data]
+[data]
   (println "conf key is: " (:API-KEY (ipg/get-config)))
   (println "Starting, exit after 10 secs")
   (process-log "testdata/newer.log")
@@ -134,7 +172,7 @@
 (comment
   (get-site-data "8.8.8.8")
   (get-site-data "71.192.181.208")
-  
+
   (def logstr "180.95.238.249 - - [27/Feb/2021:01:04:43 +0000] \"GET http://www.soso.com/ HTTP/1.1\" 200 396 \"-\" \"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36\"")
   (re-find #"(\S+).+[\[](\S+).+?\"(.+?)\"" logstr)
   (System/getProperty "user.home")
@@ -143,7 +181,7 @@
   ;; gets current working directory
   (.getCanonicalFile (clojure.java.io/file "."))
 
-  
+
   (use 'clojure.tools.trace))
 
 
