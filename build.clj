@@ -9,6 +9,10 @@
 (defn test "Run the tests." [opts]
   (bb/run-tests opts))
 
+;; I'm adding this:
+(defn uber "make an uberjar" [opts]
+  (bb/uber opts))
+
 (defn ci "Run the CI pipeline of tests (and build the uberjar)." [opts]
   (-> opts
       (assoc :lib lib :version version :main main)

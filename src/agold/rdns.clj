@@ -4,7 +4,7 @@
   (:import [java.util.concurrent Executors TimeUnit]
            [java.net InetAddress]))
 
-(defn make-thread-pool
+#_(defn make-thread-pool
   "make pool of nthreads"
   [nthreads]
   (Executors/newFixedThreadPool nthreads))
@@ -16,7 +16,7 @@
   {:ip ip :hostname (.getCanonicalHostName (InetAddress/getByName ip))})
 
 
-(defn ips->hosts
+#_(defn ips->hosts
   "translate vec of ips to vec of maps {:ip ip :hostname hn}
    with timeout interval"
   [vec-of-ips nthreads timeout]
@@ -25,14 +25,17 @@
                      (fn []
                        (reverse-dns-lookup ip)))
                    vec-of-ips)]
-    (.invokeAll pool tasks)
+    (doseq [task tasks]
+      (try
+        (println (.get (.submit pool task) timeout TimeUnit/MILLISECONDS))
+        (catch Exception e (ex-info "to" e))))
     #_(doseq [fut (.invokeAll pool tasks)]
       (try
         (println (.get fut timeout TimeUnit/MILLISECONDS))
         (catch Exception e (ex-info "wrapper err" {:ip "unk"} e))))))
 
 
-(defn rdns-with-timeout
+#_(defn rdns-with-timeout
   "reverse dns lookup of ip with timeout t in ms
    output to channel c"
   [ip t c]
@@ -62,7 +65,7 @@
 
 
 
-(comment 
+#_(comment 
   (let [outch (a/chan 10)]
     (rdns-with-timeout "46.73.159.203" 5 outch)
     (println (a/<!! outch)))
@@ -76,8 +79,8 @@
     "do reverse dns lookup on multiple threads"
     [ips]
     (let [nitems (count ips)]))
-(.convert TimeUnit/MILLISECONDS 30)
-(time
+#_(.convert TimeUnit/MILLISECONDS 30)
+#_(time
    (let [ips ["39.104.69.228" "71.192.181.208" "124.88.55.27" "180.95.238.249"
               "175.184.164.215" "180.95.231.214"]]
-     (ips->hosts ips 8 10)))
+     (ips->hosts ips 8 1500)))

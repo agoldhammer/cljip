@@ -87,7 +87,7 @@
   [data]
   (let [{:keys [country_code2 country_name city state_prov
                 district latitude longitude]} data
-        line1 (str "  " country_name "(" country_code2 ")")
+        line1 (str "  " (ansi/bold-cyan country_name) " (" country_code2 ")")
         line2 (str "  " city ", " state_prov (when (not= "" district) (str " district: " district)))
         line3 (str "  lat: " latitude " lon: " longitude)]
     [line1 line2 line3]))
@@ -103,9 +103,9 @@
       (println line))
     (doseq [event events]
       (println "  **")
-      (println "  ->date/time:" (ansi/blue (dp/jtime->datestr (:date event))))
+      (println "  date/time:" (ansi/bold-magenta (dp/jtime->datestr (:date event))))
       (println (str "  ...." (ansi/red (:entry event))))
-      (println (str "  ...." (ansi/red (:req event)))))
+      (println (str "  ...." (ansi/cyan (:req event)))))
   (println "---")))
 
 (defn pp-reduced-log
