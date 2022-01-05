@@ -6,6 +6,7 @@ To run:
 clj -X:run-m agold.cljip/proclog
 clj -m agold.cljip testdata/small.log
 clj -X:run-x
+clj -M:run-m testdata/small.log
 
 To run tests:
 clj -T:build test
