@@ -132,8 +132,9 @@
   
   (assoc-in {"abc" {:events []}} ["abc" :site-data] {:x 1 :y 2})
   (parse-log "testdata/newer.log")
-  (reduce-log "testdata/newer.log")
-  (process-log "testdata/short.log")
+  (doseq [key (keys (reduce-log "testdata/now.log"))]
+    (println key))
+  (process-log "testdata/small.log")
   (process-log "testdata/acc2022-04-01.log")
   (process-log "testdata/newer.log")
   (time (process-log "testdata/newer.log"))
